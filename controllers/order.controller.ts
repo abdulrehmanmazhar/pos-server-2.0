@@ -205,11 +205,7 @@ export const deleteOrder = CatchAsyncError(
 
       for (const item of order.cart) {
         const product = await ProductModel.findById(item.product._id);
-        if (product) {
-          product.stockQty += item.qty;
-          product.inStock = product.stockQty > 0;
-          await product.save();
-        };
+        if (product) {  
         const reducerResponse = await productReducer(
           order.customerId,
           product,
@@ -219,6 +215,7 @@ export const deleteOrder = CatchAsyncError(
         if (!reducerResponse) {
           return next(new ErrorHandler("Reducer failed to function", 500));
         }
+      };
       }
 
       await OrderModel.deleteOne({ _id: orderId });
