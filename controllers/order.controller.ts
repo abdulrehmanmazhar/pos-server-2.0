@@ -14,69 +14,59 @@ interface CustomerOrder {
   qty: number;
 }
 
-export const createCart = CatchAsyncError(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { cart } = req.body;
-      const { id: customerId } = req.params;
-      const createdBy = req.user._id;
-      let order;
+export const createCart = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { cart } = req.body;
+    const { id: customerId } = req.params;
+    const createdBy = req.user._id;
 
-      for (let { productId, qty } of cart) {
-        const customer = await CustomerModel.findById(customerId);
-        if (!customer) {
-          return next(new ErrorHandler("Customer not found", 400));
-        }
+    // Fetch customer once
+    const customer = await CustomerModel.findById(customerId);
+    if (!customer) return next(new ErrorHandler("Customer not found", 400));
 
-        const product = await ProductModel.findById(productId);
-        if (!product) {
-          return next(new ErrorHandler("Product not found", 400));
-        }
+    // Extract product IDs from cart
+    const productIds = cart.map((item) => item.productId);
 
-        const unDoneOrder = await OrderModel.findOne({
-          customerId,
-          status: { $exists: false },
-        });
+    // Fetch all products in a single query
+    const products = await ProductModel.find({ _id: { $in: productIds } });
 
-        const reducerResponse = await productReducer(
-          customerId,
-          product,
-          qty,
-          "minus"
-        );
-        if (!reducerResponse) {
-          return next(new ErrorHandler("Reducer failed to function", 500));
-        }
+    // Check if all products exist
+    if (products.length !== productIds.length) return next(new ErrorHandler("Some products not found", 400));
 
-        if (unDoneOrder) {
-          const existingProduct = unDoneOrder.cart.find(
-            (item) => item.product._id === productId
-          );
-          if (existingProduct) {
-            existingProduct.qty += qty;
-          } else {
-            unDoneOrder.cart.push({ product, qty });
-          }
-          order = await unDoneOrder.save();
-        } else {
-          order = await OrderModel.create({
-            customerId,
-            createdBy,
-            cart: [{ product, qty }],
-          });
-        }
+    // Find an existing order (if any)
+    let order = await OrderModel.findOne({ customerId, status: { $exists: false } });
 
-        res.status(200).json({
-          success: true,
-          message: `added to cart successfully`,
-          order,
-        });
+    // Process cart items
+    for (let { productId, qty } of cart) {
+      const product = products.find((p) => p._id.toString() === productId);
+      if (!product) continue; // Skip invalid product
+
+      // Reduce stock
+      const reducerResponse = await productReducer(customerId, product, qty, "minus");
+      if (!reducerResponse) return next(new ErrorHandler("Reducer failed to function", 500));
+
+      // If order exists, update it; otherwise, create a new one
+      if (order) {
+        const existingProduct = order.cart.find((item) => item.product._id.toString() === productId);
+        existingProduct ? (existingProduct.qty += qty) : order.cart.push({ product, qty });
+      } else {
+        order = await OrderModel.create({ customerId, createdBy, cart: [{ product, qty }] });
       }
-    } catch (error) {
-      return next(new ErrorHandler(error.message, 500));
     }
+
+    if (!order) return next(new ErrorHandler("Failed to create or update order", 500));
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Added to cart successfully`,
+      order,
+    });
+  } catch (error) {
+    return next(new ErrorHandler(error.message, 500));
   }
-);
+});
 
 export const deleteCart = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
