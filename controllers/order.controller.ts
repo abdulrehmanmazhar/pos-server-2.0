@@ -122,96 +122,75 @@ export const deleteCart = CatchAsyncError(
   }
 );
 
-export const addOrder = CatchAsyncError(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const orderId = req.params.id;
-      const { deliveryDate, message, additionalDiscount } = req.body;
-      let order = await OrderModel.findById(orderId);
-      if (!order) {
-        return next(new ErrorHandler("Order not found", 400));
-      }
+export const addOrder = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id: orderId } = req.params;
+    const { deliveryDate, message, additionalDiscount = 0 } = req.body;
 
-      if (!deliveryDate || !message || !additionalDiscount) {
-        return next(new ErrorHandler("Some argument is missing", 400));
-      }
-      const lastOrder = await OrderModel.findOne().sort({ orderNumber: -1 });
-      order.deliveryDate = new Date(deliveryDate);
-      order.message = message;
-      order.status = "saved";
-      order.deliveryStatus = false;
-      order.orderNumber = lastOrder ? lastOrder.orderNumber + 1 : 1;
-      order.price = Array.isArray(order.cart)
-  ? order.cart.reduce(
-      (acc, item) =>
-        acc + (item?.product?.price ?? 0) * (item?.qty ?? 0),
-      0
-    )
-  : 0;
+    const order = await OrderModel.findById(orderId);
+    if (!order) return next(new ErrorHandler("Order not found", 400));
+    if (!deliveryDate || !message) return next(new ErrorHandler("Missing required fields", 400));
 
-  order.discount =
-  (Array.isArray(order.cart)
-    ? order.cart.reduce(
-        (acc, item) =>
-          acc + (item?.product?.discount ?? 0) * (item?.qty ?? 0),
-        0
-      )
-    : 0) + (additionalDiscount ?? 0);
+    // Get the last order number and increment it
+    const lastOrder = await OrderModel.findOne().sort({ orderNumber: -1 });
+    order.orderNumber = lastOrder ? lastOrder.orderNumber + 1 : 1;
 
+    // Update order details
+    order.deliveryDate = new Date(deliveryDate);
+    order.message = message;
+    order.status = "saved";
+    order.deliveryStatus = false;
 
-      await order.save();
-
-      const customer = await CustomerModel.findById(order.customerId);
-      const customerOrder = customer.orders;
-      customerOrder.push(orderId);
-      customer.orders = customerOrder;
-
-      await customer.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Order saved successfully",
-      });
-      let contact = customer.contact;
-      // Construct receipt message
-      if (contact.startsWith("0")) {
-        contact = "92" + contact.slice(1);
-      }
-      if (contact.length > 12 || contact.length < 12) {
-        return console.log("cannot send message bcause contact is invalid");
-      }
-      const receiptMessage = `
-                🧾 *Receipt*
-                ------------------------------
-                👤 Customer: ${customer.name}
-                📞 Contact: ${customer.contact}
-                ------------------------------
-                🛒 *Order Details:*
-                ${order.cart
-                  .map((item, index) => {
-                    return `   ${index + 1}. ${item.product.name} - Qty: ${
-                      item.qty
-                    } - Price: ${item.product.price}`;
-                  })
-                  .join("\n")}
-                ------------------------------
-                📅 Estimated Delivery Date: ${new Date(
-                  order.deliveryDate
-                ).toLocaleDateString()}
-                💰 Total Bill: ${order.price - order.discount} PKR
-                ------------------------------
-                ✨ Thank you for your booking!
-                `;
-      try {
-        await sendMessage(contact, receiptMessage);
-      } catch (error) {
-        console.log("error sending the whatsapp receipt", error);
-      }
-    } catch (error) {
-      return next(new ErrorHandler(error.message, 500));
+    // Calculate price and discount safely
+    if (Array.isArray(order.cart)) {
+      order.price = order.cart.reduce((acc, item) => acc + (item?.product?.price ?? 0) * (item?.qty ?? 0), 0);
+      order.discount = order.cart.reduce((acc, item) => acc + (item?.product?.discount ?? 0) * (item?.qty ?? 0), 0) + additionalDiscount;
+    } else {
+      order.price = 0;
+      order.discount = additionalDiscount;
     }
+
+    await order.save();
+
+    // Update customer's orders
+    const customer = await CustomerModel.findById(order.customerId);
+    if (!customer) return next(new ErrorHandler("Customer not found", 400));
+
+    customer.orders.push(orderId);
+    await customer.save();
+
+    // Send response
+    res.status(200).json({ success: true, message: "Order saved successfully" });
+
+    // Send receipt message via WhatsApp
+    let contact = customer.contact.startsWith("0") ? `92${customer.contact.slice(1)}` : customer.contact;
+    if (contact.length !== 12) return console.log("Invalid contact number, cannot send message");
+
+    const receiptMessage = `
+      🧾 *Receipt*
+      ------------------------------
+      👤 Customer: ${customer.name}
+      📞 Contact: ${customer.contact}
+      ------------------------------
+      🛒 *Order Details:*
+      ${order.cart.map((item, index) => `${index + 1}. ${item.product.name} - Qty: ${item.qty} - Price: ${item.product.price}`).join("\n")}
+      ------------------------------
+      📅 Estimated Delivery Date: ${new Date(order.deliveryDate).toLocaleDateString()}
+      💰 Total Bill: ${order.price - order.discount} PKR
+      ------------------------------
+      ✨ Thank you for your booking!
+    `;
+
+    try {
+      await sendMessage(contact, receiptMessage);
+    } catch (error) {
+      console.log("Error sending the WhatsApp receipt:", error);
+    }
+  } catch (error) {
+    return next(new ErrorHandler(error.message, 500));
   }
-);
+});
+
 
 export const deleteOrder = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
