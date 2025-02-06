@@ -135,23 +135,29 @@ export const addOrder = CatchAsyncError(
       if (!deliveryDate || !message || !additionalDiscount) {
         return next(new ErrorHandler("Some argument is missing", 400));
       }
-      const orderDocuments: number = await OrderModel.countDocuments();
+      const lastOrder = await OrderModel.findOne().sort({ orderNumber: -1 });
       order.deliveryDate = new Date(deliveryDate);
       order.message = message;
       order.status = "saved";
       order.deliveryStatus = false;
-      order.orderNumber = orderDocuments;
-      order.price = order.cart.reduce(
-        (accumulator, currentValue) =>
-          accumulator + currentValue.product.price * currentValue.qty,
+      order.orderNumber = lastOrder ? lastOrder.orderNumber + 1 : 1;
+      order.price = Array.isArray(order.cart)
+  ? order.cart.reduce(
+      (acc, item) =>
+        acc + (item?.product?.price ?? 0) * (item?.qty ?? 0),
+      0
+    )
+  : 0;
+
+  order.discount =
+  (Array.isArray(order.cart)
+    ? order.cart.reduce(
+        (acc, item) =>
+          acc + (item?.product?.discount ?? 0) * (item?.qty ?? 0),
         0
-      );
-      order.discount =
-        order.cart.reduce(
-          (accumulator, currentValue) =>
-            accumulator + currentValue.product.discount * currentValue.qty,
-          0
-        ) + additionalDiscount;
+      )
+    : 0) + (additionalDiscount ?? 0);
+
 
       await order.save();
 
