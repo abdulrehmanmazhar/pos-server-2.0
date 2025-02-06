@@ -133,7 +133,8 @@ export const addOrder = CatchAsyncError(async (req: Request, res: Response, next
 
     // Get the last order number and increment it
     const lastOrder = await OrderModel.findOne().sort({ orderNumber: -1 });
-    order.orderNumber = lastOrder ? lastOrder.orderNumber + 1 : 1;
+
+    order.orderNumber = lastOrder?.orderNumber ? lastOrder.orderNumber + 1 : 1;
 
     // Update order details
     order.deliveryDate = new Date(deliveryDate);
