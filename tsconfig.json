@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+      "module": "NodeNext",
+      "moduleResolution": "NodeNext",
+      "outDir": "./dist",
+      "typeRoots": ["./node_modules/@types", "./@types"]
+      // other options...
+    },
+  "include": ["**/*.ts"],        
+  "exclude": ["node_modules"]
+}
