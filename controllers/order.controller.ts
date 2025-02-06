@@ -115,7 +115,7 @@ export const deleteCart = CatchAsyncError(
 export const addOrder = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id: orderId } = req.params;
-    const { deliveryDate, message, additionalDiscount = 0 } = req.body;
+    const { deliveryDate, message="", additionalDiscount = 0 } = req.body;
 
     const order = await OrderModel.findById(orderId);
     if (!order) return next(new ErrorHandler("Order not found", 400));
