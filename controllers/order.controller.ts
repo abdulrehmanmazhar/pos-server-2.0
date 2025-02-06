@@ -119,7 +119,7 @@ export const addOrder = CatchAsyncError(async (req: Request, res: Response, next
 
     const order = await OrderModel.findById(orderId);
     if (!order) return next(new ErrorHandler("Order not found", 400));
-    if (!deliveryDate || !message) return next(new ErrorHandler("Missing required fields", 400));
+    if (!deliveryDate) return next(new ErrorHandler("Missing required fields", 400));
 
     // Get the last order number and increment it
     const lastOrder = await OrderModel.findOne().sort({ orderNumber: -1 });
