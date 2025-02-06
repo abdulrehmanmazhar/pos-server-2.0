@@ -209,6 +209,15 @@ export const deleteOrder = CatchAsyncError(
           product.stockQty += item.qty;
           product.inStock = product.stockQty > 0;
           await product.save();
+        };
+        const reducerResponse = await productReducer(
+          order.customerId,
+          product,
+          item.qty,
+          "add"
+        );
+        if (!reducerResponse) {
+          return next(new ErrorHandler("Reducer failed to function", 500));
         }
       }
 
