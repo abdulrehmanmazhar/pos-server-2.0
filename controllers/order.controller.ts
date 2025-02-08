@@ -325,6 +325,9 @@ export const getAllOrders = CatchAsyncError(
         if(payment === undefined){
           return next(new ErrorHandler("Order payment invalid",400));
         }
+        if(order.payment){
+          return next(new ErrorHandler("Order payment invalid",400));
+        }
 
         order.payment = payment;
         await order.save();
@@ -332,6 +335,15 @@ export const getAllOrders = CatchAsyncError(
           await TransactionModel.create({createdBy: user,type: 'sale', amount: payment, description:`sales from order`})
 
         }
+        const customer = await CustomerModel.findById(order.customerId);
+        if (!customer) {
+          return next(new ErrorHandler("Customer not found", 404));
+      }
+      if(payment>order.price - order.payment){
+        return next(new ErrorHandler("Cannot pay more than remaining amount",400))
+      }
+      customer.udhar = customer.udhar-payment;
+      await customer.save();
         res.status(200).json({
           success: true,
           order,
