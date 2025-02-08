@@ -333,6 +333,11 @@ export const getAllOrders = CatchAsyncError(
   
         // Ensure discount is valid
         const discount = typeof order.discount === "number" ? order.discount : 0;
+
+              // **FIX:** Prevent any changes if payment (even 0) already exists
+      if (order.payment !== undefined && order.payment !== null) {
+        return next(new ErrorHandler("Payment has already been made and cannot be changed", 400));
+      }
   
         // Ensure order.payment is properly checked
         if (typeof order.payment === "number" && order.payment > 0) {
