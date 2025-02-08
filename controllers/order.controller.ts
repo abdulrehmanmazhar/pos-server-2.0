@@ -338,7 +338,7 @@ export const getAllOrders = CatchAsyncError(
         // If payment is greater than 0, create a transaction record
         const createTransaction =
           payment > 0
-            ? TransactionModel.create({ createdBy: user, type: "sale", amount: payment, description: "Sales from order" })
+            ? await TransactionModel.create({ createdBy: user, type: "sale", amount: payment, description: "Sales from order" })
             : Promise.resolve();
   
         // Fetch customer and update udhar if applicable
@@ -349,7 +349,8 @@ export const getAllOrders = CatchAsyncError(
         if (payment > order.price - (order.payment || 0)) {
           return next(new ErrorHandler("Cannot pay more than remaining amount", 400));
         }
-        customer.udhar -= payment;
+        
+        customer.udhar += order.price-order.discount-payment;
         const updateCustomer = customer.save();
   
         // Execute all DB operations in parallel
