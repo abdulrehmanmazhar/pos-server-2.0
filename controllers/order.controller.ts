@@ -314,45 +314,57 @@ export const getAllOrders = CatchAsyncError(
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id: orderId } = req.params;
-        const {payment} = req.body;
+        const { payment } = req.body;
         const user = req.user._id;
   
-        const order = await OrderModel.findById(orderId);
+        if (payment === undefined) {
+          return next(new ErrorHandler("Order payment invalid", 400));
+        }
+  
+        const order = await OrderModel.findById(orderId).lean();
         if (!order) {
           return next(new ErrorHandler("Order not found", 404));
         }
-
-        if(payment === undefined){
-          return next(new ErrorHandler("Order payment invalid",400));
+        if (order.payment) {
+          return next(new ErrorHandler("Order payment already exists", 400));
         }
-        if(order.payment){
-          return next(new ErrorHandler("Order payment invalid",400));
+        if (payment > order.price) {
+          return next(new ErrorHandler("Cannot pay more than total order amount", 400));
         }
-
-        order.payment = payment;
-        await order.save();
-        if(payment>0){
-          await TransactionModel.create({createdBy: user,type: 'sale', amount: payment, description:`sales from order`})
-
-        }
+  
+        // Update order payment
+        const updateOrder = OrderModel.findByIdAndUpdate(orderId, { payment }, { new: true });
+  
+        // If payment is greater than 0, create a transaction record
+        const createTransaction =
+          payment > 0
+            ? TransactionModel.create({ createdBy: user, type: "sale", amount: payment, description: "Sales from order" })
+            : Promise.resolve();
+  
+        // Fetch customer and update udhar if applicable
         const customer = await CustomerModel.findById(order.customerId);
         if (!customer) {
           return next(new ErrorHandler("Customer not found", 404));
-      }
-      if(payment>order.price - order.payment){
-        return next(new ErrorHandler("Cannot pay more than remaining amount",400))
-      }
-      customer.udhar = customer.udhar-payment;
-      await customer.save();
+        }
+        if (payment > order.price - (order.payment || 0)) {
+          return next(new ErrorHandler("Cannot pay more than remaining amount", 400));
+        }
+        customer.udhar -= payment;
+        const updateCustomer = customer.save();
+  
+        // Execute all DB operations in parallel
+        const [updatedOrder] = await Promise.all([updateOrder, createTransaction, updateCustomer]);
+  
         res.status(200).json({
           success: true,
-          order,
+          order: updatedOrder,
         });
       } catch (error) {
         return next(new ErrorHandler(error.message, 500));
       }
     }
   );
+  
   export const returnOrderUdhar = CatchAsyncError(
     async (req: Request, res: Response, next: NextFunction) => {
       try {
