@@ -386,45 +386,73 @@ export const getAllOrders = CatchAsyncError(
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id: orderId } = req.params;
-        const {payment} = req.body;
+        const { payment } = req.body;
         const user = req.user._id;
   
+        // Validate payment input
+        if (typeof payment !== "number" || isNaN(payment) || payment < 0) {
+          return next(new ErrorHandler("Payment must be a valid non-negative number", 400));
+        }
+  
+        // Fetch order
         const order = await OrderModel.findById(orderId);
         if (!order) {
           return next(new ErrorHandler("Order not found", 404));
         }
-        if(order.payment === undefined){
-          return next(new ErrorHandler("Cannot add anything to this order",400))
+  
+        // Ensure order payment is already made (even if 0)
+        if (order.payment === undefined || order.payment === null) {
+          return next(new ErrorHandler("Cannot modify this order's payment", 400));
         }
-
-        if(payment === undefined){
-          return next(new ErrorHandler("Order payment invalid",400));
+  
+        // Prevent making further payments if order is already fully paid
+        const totalPayable = order.price - (order.discount || 0);
+        if (order.payment >= totalPayable) {
+          return next(new ErrorHandler("This order is already fully paid", 400));
         }
+  
+        // Fetch customer
         const customer = await CustomerModel.findById(order.customerId);
         if (!customer) {
           return next(new ErrorHandler("Customer not found", 404));
-      }
-      if(payment>order.price - order.payment){
-        return next(new ErrorHandler("Cannot pay more than remaining amount",400))
-      }
-
-      if(payment> customer.udhar){
-          return next(new ErrorHandler("Cannot pay more than udhar amount",400))
-      }
-      const type="sale";
-      const transaction = await TransactionModel.create({createdBy: user,type, amount: payment, description:`${customer.name}-${customer.address} paid from his udhar ${customer.udhar}`})
-      if(!transaction){
-          return next(new ErrorHandler("Couldn't make transaction",500))
-      }
-      customer.udhar = customer.udhar-payment;
-      await customer.save();
-
-        order.payment = order.payment+payment;
-        await order.save();
-        if(payment>0){
-          await TransactionModel.create({createdBy: user,type: 'sale', amount: payment, description:`sales from order`})
-
         }
+  
+        // Prevent overpayment beyond the remaining order balance
+        const remainingAmount = totalPayable - order.payment;
+        if (payment > remainingAmount) {
+          return next(new ErrorHandler("Cannot pay more than the remaining amount", 400));
+        }
+  
+        // Prevent overpayment beyond customer's udhar
+        if (payment > customer.udhar) {
+          return next(new ErrorHandler("Cannot pay more than customer's udhar amount", 400));
+        }
+  
+        // If payment is zero, just prevent additional payments but allow the function to execute
+        if (payment === 0 && order.payment === 0) {
+          return next(new ErrorHandler("Payment has already been recorded as zero", 400));
+        }
+  
+        // Create transaction
+        const transaction = await TransactionModel.create({
+          createdBy: user,
+          type: "sale",
+          amount: payment,
+          description: `${customer.name} (${customer.address}) paid from their udhar: ${customer.udhar}`,
+        });
+  
+        if (!transaction) {
+          return next(new ErrorHandler("Couldn't create transaction", 500));
+        }
+  
+        // Deduct payment from customer's udhar
+        customer.udhar = Math.max(customer.udhar - payment, 0);
+        await customer.save();
+  
+        // Update order payment
+        order.payment += payment;
+        await order.save();
+  
         res.status(200).json({
           success: true,
           order,
@@ -434,4 +462,4 @@ export const getAllOrders = CatchAsyncError(
       }
     }
   );
-
+  
