@@ -317,40 +317,51 @@ export const getAllOrders = CatchAsyncError(
         const { payment } = req.body;
         const user = req.user._id;
   
-        if (payment === undefined) {
-          return next(new ErrorHandler("Order payment invalid", 400));
+        // Ensure payment is a valid number
+        if (typeof payment !== "number" || isNaN(payment) || payment < 0) {
+          return next(new ErrorHandler("Order payment must be a valid non-negative number", 400));
         }
   
+        // Fetch order details
         const order = await OrderModel.findById(orderId).lean();
         if (!order) {
           return next(new ErrorHandler("Order not found", 404));
         }
-        if (order.payment) {
+  
+        // Ensure order.price is valid
+        const orderPrice = typeof order.price === "number" ? order.price : 0;
+  
+        // Ensure discount is valid
+        const discount = typeof order.discount === "number" ? order.discount : 0;
+  
+        // Ensure order.payment is properly checked
+        if (typeof order.payment === "number" && order.payment > 0) {
           return next(new ErrorHandler("Order payment already exists", 400));
         }
-        if (payment > order.price) {
-          return next(new ErrorHandler("Cannot pay more than total order amount", 400));
+  
+        // Calculate remaining amount
+        const remainingAmount = orderPrice - discount - (order.payment || 0);
+        if (payment > remainingAmount) {
+          return next(new ErrorHandler("Cannot pay more than remaining amount", 400));
         }
   
         // Update order payment
         const updateOrder = OrderModel.findByIdAndUpdate(orderId, { payment }, { new: true });
   
-        // If payment is greater than 0, create a transaction record
+        // Create transaction if payment is greater than 0
         const createTransaction =
           payment > 0
-            ? await TransactionModel.create({ createdBy: user, type: "sale", amount: payment, description: "Sales from order" })
+            ? TransactionModel.create({ createdBy: user, type: "sale", amount: payment, description: "Sales from order" })
             : Promise.resolve();
   
-        // Fetch customer and update udhar if applicable
+        // Fetch customer
         const customer = await CustomerModel.findById(order.customerId);
         if (!customer) {
           return next(new ErrorHandler("Customer not found", 404));
         }
-        if (payment > order.price - (order.payment || 0)) {
-          return next(new ErrorHandler("Cannot pay more than remaining amount", 400));
-        }
-        
-        customer.udhar += order.price-order.discount-payment;
+  
+        // Ensure customer.udhar is a valid number
+        customer.udhar = Math.max((customer.udhar || 0) + remainingAmount - payment, 0);
         const updateCustomer = customer.save();
   
         // Execute all DB operations in parallel
