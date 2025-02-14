@@ -10,7 +10,10 @@ import productRouter from "./routes/product.route"
 import orderRouter from "./routes/order.route"
 import transactionRouter from "./routes/transaction.route"
 import analyticsRouter from "./routes/analytics.route"
-import productSaleRouter from "./routes/productSale.route"
+import productSaleRouter from "./routes/productSale.route";
+import http from 'http';
+import { Server } from 'socket.io';
+import { connectWhatsapp } from "./utils/whatsapp";
 
 app.use(express.static('public'));
 
@@ -30,6 +33,18 @@ app.use(cors({
     },
     credentials: true, // Enable credentials
   }));
+
+  // whatsapp 
+  const server = http.createServer(app);
+  const io = new Server(server, {
+      cors: { origin: '*' } // Allow frontend to connect
+  });
+  io.on('connection', (socket) => {
+    console.log('Frontend connected to WebSocket');
+});
+
+// Start WhatsApp connection with WebSocket instance
+connectWhatsapp(io);
 
 app.use("/api/v1", userRouter);
 app.use("/api/v1", customerRouter);
