@@ -471,23 +471,34 @@ export const routeAssign = CatchAsyncError(async (req: Request, res: Response, n
 });
 
 
-export const routeAssignDeletion = CatchAsyncError(async(req: Request, res: Response, next: NextFunction)=>{
+export const routeAssignDeletion = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const {id: userId, index} = req.params;
+        const { id: userId, index } = req.params;
         const doesUserExist = await userModel.findById(userId);
-        if(!doesUserExist){
-            return next(new ErrorHandler('User Does not exist', 400))
-        }
-        const routeArray = doesUserExist.routes;
-        doesUserExist.routes = routeArray.splice(parseInt(index,10),1);
 
-        doesUserExist.save();
-        res.status(201).json({
+        if (!doesUserExist) {
+            return next(new ErrorHandler("User does not exist", 400));
+        }
+
+        // Ensure index is a valid number
+        const idx = parseInt(index, 10);
+        if (isNaN(idx) || idx < 0 || idx >= doesUserExist.routes.length) {
+            return next(new ErrorHandler("Invalid index", 400));
+        }
+
+        // Remove the element at the given index
+        doesUserExist.routes.splice(idx, 1);
+
+        // Save the updated document
+        await doesUserExist.save();
+
+        res.status(200).json({
             success: true,
-            message: 'deleted assigned route from user successfully'
-        })
+            message: "Deleted assigned route from user successfully",
+            remainingRoutes: doesUserExist.routes, // Optional: Return remaining routes
+        });
 
     } catch (error) {
-        return next(new ErrorHandler(error.message,400))
+        return next(new ErrorHandler(error.message, 400));
     }
 });
