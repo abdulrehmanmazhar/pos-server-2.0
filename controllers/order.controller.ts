@@ -160,19 +160,24 @@ export const addOrder = CatchAsyncError(async (req: Request, res: Response, next
     if (contact.length !== 12) return console.log("Invalid contact number, cannot send message");
 
     const receiptMessage = `
-      🧾 *Receipt*
-      ------------------------------
-      👤 Customer: ${customer.name}
-      📞 Contact: ${customer.contact}
-      ------------------------------
-      🛒 *Order Details:*
-      ${order.cart.map((item, index) => `${index + 1}. ${item.product.name} - Qty: ${item.qty} - Price: ${item.product.price}`).join("\n")}
-      ------------------------------
-      📅 Estimated Delivery Date: ${new Date(order.deliveryDate).toLocaleDateString()}
-      💰 Total Bill: ${order.price - order.discount} PKR
-      ------------------------------
-      ✨ Thank you for your booking!
+    🧾 *Receipt*
+    ━━━━━━━━━━━━━━━━━━━━
+    🏢 *Business:* ${customer.businessName}
+    👤 *Customer:* ${customer.name}
+    📞 *Contact:* ${customer.contact}
+    📍 *Address:* ${customer.address}
+    ━━━━━━━━━━━━━━━━━━━━
+    🛒 *Order Details:*
+    ${order.cart.map((item, index) => `🔹 *${index + 1}.* ${item.product.name}  
+       📦 Qty: ${item.qty}  💵 Price: ${item.product.price} PKR`).join("\n")}
+    ━━━━━━━━━━━━━━━━━━━━
+    📅 *Delivery Date:* ${new Date(order.deliveryDate).toLocaleDateString()}
+    💰 *Discount:* ${order.discount} PKR
+    💵 *Total Bill:* ${order.price - order.discount} PKR
+    ━━━━━━━━━━━━━━━━━━━━
+    ✨ *Thank you for your order!* We appreciate your business. 😊
     `;
+    
 
     try {
       await sendMessage(contact, receiptMessage);
