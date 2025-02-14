@@ -438,30 +438,38 @@ export const verifyUser = CatchAsyncError(async(req: Request, res: Response, nex
     }
 });
 
-export const routeAssign = CatchAsyncError(async(req: Request, res: Response, next: NextFunction)=>{
+export const routeAssign = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const {id: userId} = req.params;
+        const { id: userId } = req.params;
         const route: string = req.body.route as string;
-        const doesUserExist = await userModel.findById(userId);
-        if(!doesUserExist){
-            return next(new ErrorHandler('User Does not exist', 400))
-        }
-        if(!route){
-            return next(new ErrorHandler('Assign appropriate route', 400))
-        }
-        const routeArray = doesUserExist.routes;
-        doesUserExist.routes = routeArray.push(route);
 
-        doesUserExist.save();
-        res.status(201).json({                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+        // Check if user exists
+        const doesUserExist = await userModel.findById(userId);
+        if (!doesUserExist) {
+            return next(new ErrorHandler("User does not exist", 400));
+        }
+
+        // Validate route
+        if (!route) {
+            return next(new ErrorHandler("Assign appropriate route", 400));
+        }
+
+        // Add route to the user's routes array
+        doesUserExist.routes.push(route);
+
+        // Save the updated user document
+        await doesUserExist.save();
+
+        res.status(201).json({
             success: true,
-            message: 'assigned route to user successfully'
-        })
+            message: "Assigned route to user successfully",
+        });
 
     } catch (error) {
-        return next(new ErrorHandler(error.message,400))
+        return next(new ErrorHandler(error.message, 400));
     }
 });
+
 
 export const routeAssignDeletion = CatchAsyncError(async(req: Request, res: Response, next: NextFunction)=>{
     try {
