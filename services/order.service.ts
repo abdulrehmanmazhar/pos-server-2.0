@@ -15,11 +15,12 @@ export function runScheduler () {
 
         try {
             const today = new Date();
-        today.setHours(0, 0, 0, 0); // Start of the day
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
+            today.setUTCHours(0, 0, 0, 0); // Midnight in UTC
+            
+            const tomorrow = new Date(today);
+            tomorrow.setUTCDate(today.getUTCDate() + 1); // Next day's midnight in UTC
 
-        const orders = await OrderModel.find({deliveryDate: { $gte: today, $lt: tomorrow }, payment:{$exist: false}})
+        const orders = await OrderModel.find({deliveryDate: { $gte: today, $lt: tomorrow }, payment:{$exists: false}})
 
         for (const order of orders) {
             console.log(`Order Number: ${order.orderNumber} - Payment added: ${order.price}`);
@@ -28,7 +29,7 @@ export function runScheduler () {
             await TransactionModel.create({type:'sale', description:`Sale against order number ${order.orderNumber} as sale`, amount: order.price, orderId: order._id, createdBy: 'machine'})
         }
         } catch (error) {
-            console.log("failed to add full payment");
+            console.log("failed to add full payment", error);
         }
     });
     

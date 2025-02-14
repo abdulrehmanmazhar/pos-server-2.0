@@ -129,6 +129,7 @@ export const addOrder = CatchAsyncError(async (req: Request, res: Response, next
 
     // Update order details
     order.deliveryDate = new Date(deliveryDate);
+    order.deliveryDate.setUTCHours(0, 0, 0, 0);
     order.message = message;
     order.status = "saved";
     order.deliveryStatus = false;
