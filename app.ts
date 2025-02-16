@@ -11,6 +11,7 @@ import orderRouter from "./routes/order.route"
 import transactionRouter from "./routes/transaction.route"
 import analyticsRouter from "./routes/analytics.route"
 import productSaleRouter from "./routes/productSale.route";
+import targetRouter from "./routes/target.route";
 // import http from 'http';
 // import { Server } from 'socket.io';
 // import { connectWhatsapp } from "./utils/whatsapp";
@@ -53,6 +54,7 @@ app.use("/api/v1", orderRouter);
 app.use("/api/v1", transactionRouter);
 app.use("/api/v1", analyticsRouter);
 app.use("/api/v1", productSaleRouter);
+app.use("/api/v1", targetRouter);
 
 
 app.get("/test", (req,res)=>{
