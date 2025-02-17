@@ -122,3 +122,27 @@ export const updateTargetProgress = CatchAsyncError(async (req: Request, res: Re
         return next(new ErrorHandler(error.message, 500));
     }
 });
+
+
+export const deleteTarget = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id: targetId } = req.params; // Target ID from URL
+
+        // Find the target document
+        const target = await TargetModel.findById(targetId);
+        if (!target) {
+            return next(new ErrorHandler("Target not found", 404));
+        }
+
+        // Delete target
+        await target.deleteOne();
+
+        res.status(200).json({
+            success: true,
+            message: "Target deleted successfully",
+        });
+
+    } catch (error) {
+        return next(new ErrorHandler(error.message, 500));
+    }
+});

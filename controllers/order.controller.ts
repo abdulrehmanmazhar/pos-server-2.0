@@ -9,6 +9,7 @@ import CustomerModel from "../models/customer.model";
 import productReducer from "../utils/productReducer";
 import { sendMessage } from "../utils/whatsapp";
 import TransactionModel from "../models/transaction.model";
+import { targetUpdation } from "../services/order.service";
 
 interface CustomerOrder {
   product: IProduct;
@@ -58,6 +59,7 @@ export const createCart = CatchAsyncError(async (req: Request, res: Response, ne
     if (!order) return next(new ErrorHandler("Failed to create or update order", 500));
 
     await order.save();
+    await targetUpdation(req.user._id);
 
     res.status(200).json({
       success: true,
