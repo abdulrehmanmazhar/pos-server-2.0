@@ -47,97 +47,213 @@ export function runScheduler() {
 
   console.log("in scheduler");
 }
+// export async function targetUpdation(user: string) {
+//   try {
+//     const targets = await TargetModel.find({
+//       userId: user,
+//       endDate: { $gte: new Date() },
+//     });
+//     let results:any = 'result';
+
+//     for (const target of targets) {
+//       switch (target.type) {
+//         case "orders":
+//           console.log("orders");
+//           if(target?.productId){
+//             const orders = await OrderModel.find({
+//               createdBy: user,
+//               createdAt: { $gte: target.startDate, $lte: target.endDate },
+//               cart: {
+//                   $elemMatch: {
+//                       "product._id": target.productId
+//                   }
+//               }
+//           });
+//             const ordersLength = orders.length;
+//             results = ordersLength;
+//           }
+//           else{
+//             const orders = await OrderModel.find({createdBy: user, createdAt:{$gte:target.startDate, $lte: target.endDate}});
+//             const ordersLength = orders.length;
+//             results = ordersLength;
+//           }
+//           break;
+
+
+//         case "quantity":
+//           console.log("quantity");
+//           if(target?.productId){
+//             const orders = await OrderModel.find({
+//               createdBy: user,
+//               createdAt: { $gte: target.startDate, $lte: target.endDate },
+//               cart: {
+//                   $elemMatch: {
+//                       "product._id": target.productId
+//                   }
+//               }
+//           });
+//             const flattenedCart = orders.flatMap(order => order.cart);
+//             const filteredCart = flattenedCart.filter((item)=>item.product._id === target.productId)
+//             const ordersQuantity = filteredCart.reduce((acc, now)=>acc+now.qty,0);
+//             results = ordersQuantity
+//           }
+//           else{
+//             const orders = await OrderModel.find({createdBy: user, createdAt:{$gte:target.startDate, $lte: target.endDate}});
+//             const flattenedCart = orders.flatMap(order => order.cart);
+//             const ordersQuantity = flattenedCart.reduce((acc, now)=>acc+now.qty,0);
+//             results = ordersQuantity
+//           }
+//           break;
+
+
+//         case "sales":
+//           console.log("sales");
+//           if(target?.productId){
+//             const orders = await OrderModel.find({
+//               createdBy: user,
+//               createdAt: { $gte: target.startDate, $lte: target.endDate },
+//               cart: {
+//                   $elemMatch: {
+//                       "product._id": target.productId
+//                   }
+//               }
+//           });
+//             const ordersPayment = orders.reduce((accumulator, currentValue, currentIndex, array)=>accumulator+currentValue.payment,0);
+//             results = ordersPayment;
+//           }
+//           else{
+//             const orders = await OrderModel.find({createdBy: user, createdAt:{$gte:target.startDate, $lte: target.endDate}});
+//             const ordersPayment = orders.reduce((accumulator, currentValue, currentIndex, array)=>accumulator+currentValue.payment,0);
+//             results = ordersPayment;
+//           }
+//           break;
+
+//         default:
+//             console.log("unknown bug")
+//           break;
+//       }
+//       console.log(results);
+//     }
+//   } catch (error) {
+//     console.log("could not update the target", error);
+//   }
+// }
+
+import mongoose from "mongoose";
+
 export async function targetUpdation(user: string) {
   try {
     const targets = await TargetModel.find({
       userId: user,
       endDate: { $gte: new Date() },
     });
-    let results:any = 'result';
 
-    for (const target of targets) {
-      switch (target.type) {
-        case "orders":
-          console.log("orders");
-          if(target?.productId){
-            const orders = await OrderModel.find({
-              createdBy: user,
-              createdAt: { $gte: target.startDate, $lte: target.endDate },
-              cart: {
+    let results: any = "result";
+
+    // Execute all queries in parallel using Promise.all
+    await Promise.all(
+      targets.map(async (target) => {
+        switch (target.type) {
+          case "orders":
+            console.log("orders");
+            if (target?.productId) {
+              const productObjectId = new mongoose.Types.ObjectId(target.productId);
+              const orders = await OrderModel.find({
+                createdBy: user,
+                createdAt: { $gte: target.startDate, $lte: target.endDate },
+                cart: {
                   $elemMatch: {
-                      "product._id": target.productId
-                  }
-              }
-          });
-            const ordersLength = orders.length;
-            results = ordersLength;
-          }
-          else{
-            const orders = await OrderModel.find({createdBy: user, createdAt:{$gte:target.startDate, $lte: target.endDate}});
-            const ordersLength = orders.length;
-            results = ordersLength;
-          }
-          break;
+                    "product._id": productObjectId,
+                  },
+                },
+              });
+              results = orders.length;
+            } else {
+              const orders = await OrderModel.find({
+                createdBy: user,
+                createdAt: { $gte: target.startDate, $lte: target.endDate },
+              });
+              results = orders.length;
+            }
+            break;
 
-
-        case "quantity":
-          console.log("quantity");
-          if(target?.productId){
-            const orders = await OrderModel.find({
-              createdBy: user,
-              createdAt: { $gte: target.startDate, $lte: target.endDate },
-              cart: {
+          case "quantity":
+            console.log("quantity");
+            if (target?.productId) {
+              const productObjectId = new mongoose.Types.ObjectId(target.productId);
+              const orders = await OrderModel.find({
+                createdBy: user,
+                createdAt: { $gte: target.startDate, $lte: target.endDate },
+                cart: {
                   $elemMatch: {
-                      "product._id": target.productId
-                  }
-              }
-          });
-            const flattenedCart = orders.flatMap(order => order.cart);
-            const filteredCart = flattenedCart.filter((item)=>item.product._id === target.productId)
-            const ordersQuantity = filteredCart.reduce((acc, now)=>acc+now.qty,0);
-            results = ordersQuantity
-          }
-          else{
-            const orders = await OrderModel.find({createdBy: user, createdAt:{$gte:target.startDate, $lte: target.endDate}});
-            const flattenedCart = orders.flatMap(order => order.cart);
-            const ordersQuantity = flattenedCart.reduce((acc, now)=>acc+now.qty,0);
-            results = ordersQuantity
-          }
-          break;
+                    "product._id": productObjectId,
+                  },
+                },
+              });
 
+              const ordersQuantity = orders.reduce((acc, order) => {
+                return (
+                  acc +
+                  order.cart
+                    .filter((item) => item.product._id.toString() === productObjectId.toString())
+                    .reduce((sum, item) => sum + item.qty, 0)
+                );
+              }, 0);
 
-        case "sales":
-          console.log("sales");
-          if(target?.productId){
-            const orders = await OrderModel.find({
-              createdBy: user,
-              createdAt: { $gte: target.startDate, $lte: target.endDate },
-              cart: {
+              results = ordersQuantity;
+            } else {
+              const orders = await OrderModel.find({
+                createdBy: user,
+                createdAt: { $gte: target.startDate, $lte: target.endDate },
+              });
+
+              const ordersQuantity = orders.reduce(
+                (acc, order) => acc + order.cart.reduce((sum, item) => sum + item.qty, 0),
+                0
+              );
+
+              results = ordersQuantity;
+            }
+            break;
+
+          case "sales":
+            console.log("sales");
+            if (target?.productId) {
+              const productObjectId = new mongoose.Types.ObjectId(target.productId);
+              const orders = await OrderModel.find({
+                createdBy: user,
+                createdAt: { $gte: target.startDate, $lte: target.endDate },
+                cart: {
                   $elemMatch: {
-                      "product._id": target.productId
-                  }
-              }
-          });
-            const ordersPayment = orders.reduce((accumulator, currentValue, currentIndex, array)=>accumulator+currentValue.payment,0);
-            results = ordersPayment;
-          }
-          else{
-            const orders = await OrderModel.find({createdBy: user, createdAt:{$gte:target.startDate, $lte: target.endDate}});
-            const ordersPayment = orders.reduce((accumulator, currentValue, currentIndex, array)=>accumulator+currentValue.payment,0);
-            results = ordersPayment;
-          }
-          break;
+                    "product._id": productObjectId,
+                  },
+                },
+              });
 
-        default:
-            console.log("unknown bug")
-          break;
-      }
-      console.log(results);
-    }
+              results = orders.reduce((acc, order) => acc + order.payment, 0);
+            } else {
+              const orders = await OrderModel.find({
+                createdBy: user,
+                createdAt: { $gte: target.startDate, $lte: target.endDate },
+              });
+
+              results = orders.reduce((acc, order) => acc + order.payment, 0);
+            }
+            break;
+
+          default:
+            console.log("Unknown target type:", target.type);
+            break;
+        }
+
+        console.log(`Result for ${target.type}:`, results);
+      })
+    );
   } catch (error) {
-    console.log("could not update the target", error);
+    console.error("Could not update the target:", error);
   }
 }
+
 
 export const addPayment = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
