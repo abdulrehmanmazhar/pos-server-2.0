@@ -247,6 +247,8 @@ export async function targetUpdation(user: string) {
         }
 
         console.log(`Result for ${target.type}:`, results);
+        target.progress = results;
+        await target.save();
       })
     );
   } catch (error) {
