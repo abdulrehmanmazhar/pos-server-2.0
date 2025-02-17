@@ -51,9 +51,9 @@ export async function targetUpdation(user: string) {
   try {
     const targets = await TargetModel.find({
       userId: user,
-      endDate: { $lte: new Date() },
+      endDate: { $gte: new Date() },
     });
-    let results:any;
+    let results:any = 'result';
 
     for (const target of targets) {
       switch (target.type) {
