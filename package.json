@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "postbuild": "cp -r mails dist/mails",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only index.ts"
   },
