@@ -359,7 +359,7 @@ export const getAllOrders = CatchAsyncError(
         }
   
         // Update order payment
-        const updateOrder = OrderModel.findByIdAndUpdate(orderId, { payment }, { new: true });
+        const updateOrder = OrderModel.findByIdAndUpdate(orderId, { payment, deliveryStatus: true }, { new: true });
   
         // Create transaction if payment is greater than 0
         const createTransaction =

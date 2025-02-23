@@ -31,6 +31,7 @@ export function runScheduler() {
           `Order Number: ${order.orderNumber} - Payment added: ${order.price}`
         );
         order.payment = order.price;
+        order.deliveryStatus = true;
         await order.save(); // Save changes to the database
         await TransactionModel.create({
           type: "sale",
