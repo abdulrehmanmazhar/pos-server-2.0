@@ -6,10 +6,10 @@ const dbUrl : string = process.env.MONGOURI || "";
 const connectDB = async () =>{
     try {
         await mongoose.connect(dbUrl).then((data: any)=>{
-            console.log(`database connected with ${data.connection.host}`)
+            //console.log(`database connected with ${data.connection.host}`)
         })
     } catch (error) {
-        console.log(error.message);
+        //console.log(error.message);
         setTimeout(connectDB, 5000);
     }
 }

@@ -276,7 +276,7 @@ interface IUpdatePassword{
 export const updatePassword = CatchAsyncError(async(req: Request, res: Response, next: NextFunction)=>{
     try {
         const {oldPassword, newPassword} = req.body as IUpdatePassword;
-        console.log(oldPassword, newPassword);
+        //console.log(oldPassword, newPassword);
         if(!oldPassword || !newPassword){
             return next(new ErrorHandler("Please enter old or new password", 400))
         }

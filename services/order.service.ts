@@ -12,7 +12,7 @@ import { accessTokenOptions } from "../utils/jwt";
 // Schedule the job to run at 10:05 PM
 export function runScheduler() {
   schedule.scheduleJob("updateOrderPayments", "30 23 * * *", async () => {
-    console.log("Running nightly order payment check...");
+    //console.log("Running nightly order payment check...");
 
     try {
       const today = new Date();
@@ -27,9 +27,7 @@ export function runScheduler() {
       });
 
       for (const order of orders) {
-        console.log(
-          `Order Number: ${order.orderNumber} - Payment added: ${order.price}`
-        );
+
         order.payment = order.price;
         order.deliveryStatus = true;
         await order.save(); // Save changes to the database
@@ -42,11 +40,11 @@ export function runScheduler() {
         });
       }
     } catch (error) {
-      console.log("failed to add full payment", error);
+      //console.log("failed to add full payment", error);
     }
   });
 
-  console.log("in scheduler");
+  //console.log("in scheduler");
 }
 // export async function targetUpdation(user: string) {
 //   try {
@@ -59,7 +57,7 @@ export function runScheduler() {
 //     for (const target of targets) {
 //       switch (target.type) {
 //         case "orders":
-//           console.log("orders");
+//           //console.log("orders");
 //           if(target?.productId){
 //             const orders = await OrderModel.find({
 //               createdBy: user,
@@ -82,7 +80,7 @@ export function runScheduler() {
 
 
 //         case "quantity":
-//           console.log("quantity");
+//           //console.log("quantity");
 //           if(target?.productId){
 //             const orders = await OrderModel.find({
 //               createdBy: user,
@@ -108,7 +106,7 @@ export function runScheduler() {
 
 
 //         case "sales":
-//           console.log("sales");
+//           //console.log("sales");
 //           if(target?.productId){
 //             const orders = await OrderModel.find({
 //               createdBy: user,
@@ -130,13 +128,13 @@ export function runScheduler() {
 //           break;
 
 //         default:
-//             console.log("unknown bug")
+//             //console.log("unknown bug")
 //           break;
 //       }
-//       console.log(results);
+//       //console.log(results);
 //     }
 //   } catch (error) {
-//     console.log("could not update the target", error);
+//     //console.log("could not update the target", error);
 //   }
 // }
 
@@ -156,7 +154,7 @@ export async function targetUpdation(user: string) {
       targets.map(async (target) => {
         switch (target.type) {
           case "orders":
-            console.log("orders");
+            //console.log("orders");
             if (target?.productId) {
               const productObjectId = new mongoose.Types.ObjectId(target.productId);
               const orders = await OrderModel.find({
@@ -179,7 +177,7 @@ export async function targetUpdation(user: string) {
             break;
 
           case "quantity":
-            console.log("quantity");
+            //console.log("quantity");
             if (target?.productId) {
               const productObjectId = new mongoose.Types.ObjectId(target.productId);
               const orders = await OrderModel.find({
@@ -218,7 +216,7 @@ export async function targetUpdation(user: string) {
             break;
 
           case "sales":
-            console.log("sales");
+            //console.log("sales");
             if (target?.productId) {
               const productObjectId = new mongoose.Types.ObjectId(target.productId);
               const orders = await OrderModel.find({
@@ -243,11 +241,11 @@ export async function targetUpdation(user: string) {
             break;
 
           default:
-            console.log("Unknown target type:", target.type);
+            //console.log("Unknown target type:", target.type);
             break;
         }
 
-        console.log(`Result for ${target.type}:`, results);
+        //console.log(`Result for ${target.type}:`, results);
         target.progress = results;
         await target.save();
       })

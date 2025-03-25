@@ -11,7 +11,7 @@ export const addProduct = CatchAsyncError(async(req: Request, res: Response, nex
         const { name, category, price, stockQty, totalBill, discount } = req.body;
         const createdBy= req.user._id;
         let inStock = false;
-        // console.log(name, category, price, stockQty, totalBill, discount)
+        // //console.log(name, category, price, stockQty, totalBill, discount)
         if(name && category && price && stockQty &&totalBill){   
             const product = await ProductModel.findOne({name, category});
             

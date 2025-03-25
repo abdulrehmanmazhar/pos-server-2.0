@@ -5,7 +5,7 @@
 
 // // create server
 // app.listen(process.env.PORT, ()=>{
-//     console.log("Server is running on", process.env.PORT);
+//     //console.log("Server is running on", process.env.PORT);
 //     connectDB();
 //     runScheduler();
 // })
@@ -27,7 +27,7 @@ const io = new Server(server, {
 });
 
 io.on("connection", (socket) => {
-    console.log("Frontend connected to WebSocket");
+    //console.log("Frontend connected to WebSocket");
 });
 
 // ✅ Start WhatsApp connection with WebSocket instance
@@ -35,7 +35,7 @@ connectWhatsapp(io);
 
 // ✅ Start Server
 server.listen(process.env.PORT, () => {
-    console.log("Server is running on", process.env.PORT);
+    //console.log("Server is running on", process.env.PORT);
     connectDB();
     runScheduler();
 });
@@ -58,7 +58,7 @@ const localIpAddress = getLocalIpAddress();
 
 // ✅ Start Server
 // server.listen(parseInt(process.env.PORT, 10), localIpAddress, () => {
-//     console.log(`Server is running on ${localIpAddress}:${process.env.PORT}`);
+//     //console.log(`Server is running on ${localIpAddress}:${process.env.PORT}`);
 //     connectDB();
 //     runScheduler();
 // });

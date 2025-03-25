@@ -28,7 +28,7 @@ app.use(cookieParser());
 // cors
 app.use(cors({
     origin: (origin, callback) => {
-        console.log(origin)
+        //console.log(origin)
       // Allow all origins dynamically
       callback(null, origin || '*');
     },
@@ -41,7 +41,7 @@ app.use(cors({
 //       cors: { origin: '*' } // Allow frontend to connect
 //   });
 //   io.on('connection', (socket) => {
-//     console.log('Frontend connected to WebSocket');
+//     //console.log('Frontend connected to WebSocket');
 // });
 
 // // Start WhatsApp connection with WebSocket instance

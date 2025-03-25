@@ -37,7 +37,7 @@ export const PDFgenerator = CatchAsyncError(async (req: Request, res: Response, 
     //     await page.pdf({ path: pdfPath, format: "A4" }); // Save PDF to the specified path
     //     await browser.close();
 
-    //     console.log(`PDF generated successfully at ${pdfPath}`);
+    //     //console.log(`PDF generated successfully at ${pdfPath}`);
 
         res.status(200).json({
             success: true,

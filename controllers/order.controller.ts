@@ -78,8 +78,8 @@ export const createOrder = CatchAsyncError(async (req: Request, res: Response, n
     const additionalDiscount = parseFloat(req.body.additionalDiscount) || 0;
     const createdBy = req.user._id;
 
-    console.log('body',req.body);
-    console.log('params',req.params);
+    //console.log('body',req.body);
+    //console.log('params',req.params);
 
     // Fetch customer once
     const customer = await CustomerModel.findById(customerId);
@@ -178,7 +178,7 @@ export const createOrder = CatchAsyncError(async (req: Request, res: Response, n
       contact = `92${contact}`;
     }
 
-    if (contact.length !== 12) return console.log("Invalid contact number, cannot send message");
+    if (contact.length !== 12) return //console.log("Invalid contact number, cannot send message");
 
 
     const receiptMessage = `
@@ -204,7 +204,7 @@ export const createOrder = CatchAsyncError(async (req: Request, res: Response, n
     try {
       await sendMessage(contact, receiptMessage);
     } catch (error) {
-      console.log("Error sending the WhatsApp receipt:", error);
+      //console.log("Error sending the WhatsApp receipt:", error);
     }
   } catch (error) {
     return next(new ErrorHandler(error.message, 500));
@@ -299,7 +299,7 @@ export const addOrder = CatchAsyncError(async (req: Request, res: Response, next
 
     // Send receipt message via WhatsApp
     let contact = customer.contact.startsWith("0") ? `92${customer.contact.slice(1)}` : customer.contact;
-    if (contact.length !== 12) return console.log("Invalid contact number, cannot send message");
+    if (contact.length !== 12) return //console.log("Invalid contact number, cannot send message");
 
     const receiptMessage = `
     🧾 *Receipt*
@@ -324,7 +324,7 @@ export const addOrder = CatchAsyncError(async (req: Request, res: Response, next
     try {
       await sendMessage(contact, receiptMessage);
     } catch (error) {
-      console.log("Error sending the WhatsApp receipt:", error);
+      //console.log("Error sending the WhatsApp receipt:", error);
     }
   } catch (error) {
     return next(new ErrorHandler(error.message, 500));

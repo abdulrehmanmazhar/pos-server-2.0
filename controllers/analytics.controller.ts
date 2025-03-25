@@ -18,7 +18,7 @@ export const getSales = CatchAsyncError(async (req: Request, res: Response, next
         const { type, dateRange, startDate, endDate } = req.body;
 
         const transactions = await (async function (type: string, dateRange: string, startDate: string, endDate: string) {
-            // console.log("Function invoked with parameters:", { type, dateRange, startDate, endDate });
+            // //console.log("Function invoked with parameters:", { type, dateRange, startDate, endDate });
 
             let filter: IFilter = { type: type };
             const now = new Date();
@@ -43,9 +43,9 @@ export const getSales = CatchAsyncError(async (req: Request, res: Response, next
                 }
             }
 
-            // console.log("Filter created:", filter);
+            // //console.log("Filter created:", filter);
             const result = await TransactionModel.find(filter);
-            // console.log("Transactions fetched:", result);
+            // //console.log("Transactions fetched:", result);
             return result;
         })(type, dateRange, startDate, endDate);
 
