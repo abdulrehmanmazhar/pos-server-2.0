@@ -5,6 +5,9 @@ node_modules/
 dist/
 build/
 
+# auth WA
+auth/
+
 # TypeScript cache and output files
 *.tsbuildinfo
 
