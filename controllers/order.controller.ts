@@ -71,6 +71,146 @@ export const createCart = CatchAsyncError(async (req: Request, res: Response, ne
   }
 });
 
+export const createOrder = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { cart , deliveryDate, message="",  } = req.body;
+    const { id: customerId } = req.params;
+    const additionalDiscount = parseFloat(req.body.additionalDiscount) || 0;
+    const createdBy = req.user._id;
+
+    console.log('body',req.body);
+    console.log('params',req.params);
+
+    // Fetch customer once
+    const customer = await CustomerModel.findById(customerId);
+    if (!customer) return next(new ErrorHandler("Customer not found", 400));
+
+    // Extract product IDs from cart
+    const productIds = cart.map((item) => item.productId);
+
+    // Fetch all products in a single query
+    const products = await ProductModel.find({ _id: { $in: productIds } });
+
+    // Check if all products exist
+    if (products.length !== productIds.length) return next(new ErrorHandler("Some products not found", 400));
+
+    // Find an existing order (if any)
+    let order = await OrderModel.findOne({ customerId, status: { $exists: false } });
+
+    // Process cart items
+    for (let { productId, qty } of cart) {
+      const product = products.find((p) => p._id.toString() === productId);
+      if (!product) continue; // Skip invalid product
+
+      // Reduce stock
+      const reducerResponse = await productReducer(customerId, product, qty, "minus");
+      if (!reducerResponse) return next(new ErrorHandler("Reducer failed to function", 500));
+
+      // If order exists, update it; otherwise, create a new one
+      if (order) {
+        const existingProduct = order.cart.find((item) => item.product._id.toString() === productId);
+        existingProduct ? (existingProduct.qty += qty) : order.cart.push({ product, qty });
+      } else {
+        order = await OrderModel.create({ customerId, createdBy, cart: [{ product, qty }] });
+      }
+    }
+
+    if (!order) return next(new ErrorHandler("Failed to create or update order", 500));
+
+    await order.save();
+    await targetUpdation(req.user._id);
+
+    // res.status(200).json({
+    //   success: true,
+    //   message: `Added to cart successfully`,
+    //   order,
+    // });
+
+    const orderId: string = order._id.toString();
+
+    if (!order) return next(new ErrorHandler("Order not found", 400));
+    if (!deliveryDate) return next(new ErrorHandler("Missing required fields", 400));
+
+    // Get the last order number and increment it
+    const lastOrder = await OrderModel.findOne().sort({ orderNumber: -1 });
+
+    order.orderNumber = lastOrder?.orderNumber ? lastOrder.orderNumber + 1 : 1;
+
+    // Update order details
+    order.deliveryDate = new Date(deliveryDate);
+    order.deliveryDate.setUTCHours(0, 0, 0, 0);
+    order.message = message;
+    order.status = "saved";
+    order.deliveryStatus = false;
+
+    // Calculate price and discount safely
+    if (Array.isArray(order.cart)) {
+      order.price = order.cart.reduce((acc, item) => acc + (item?.product?.price ?? 0) * (item?.qty ?? 0), 0);
+      order.discount = order.cart.reduce((acc, item) => acc + (item?.product?.discount ?? 0) * (item?.qty ?? 0), 0) + additionalDiscount;
+    } else {
+      order.price = 0;
+      order.discount = additionalDiscount;
+    }
+
+    await order.save();
+
+    // Update customer's orders
+    // const customer = await CustomerModel.findById(order.customerId);
+    if (!customer) return next(new ErrorHandler("Customer not found", 400));
+
+    customer.orders.push(orderId);
+    await customer.save();
+
+    // Send response
+    res.status(200).json({ success: true, message: "Order saved successfully" });
+
+    // Send receipt message via WhatsApp
+    let contact = customer.contact.replace(/[^0-9]/g, ""); // Remove all non-numeric characters
+    if (contact.startsWith("0")) {
+      contact = `92${contact.slice(1)}`;
+    } else if (contact.startsWith("92")) {
+      // Do nothing, already in correct format
+    } else if (contact.startsWith("0092")) {
+      contact = contact.slice(2);
+    } else if (contact.startsWith("+92")) {
+      contact = contact.slice(1);
+    } else {
+      contact = `92${contact}`;
+    }
+
+    if (contact.length !== 12) return console.log("Invalid contact number, cannot send message");
+
+
+    const receiptMessage = `
+    🧾 *Receipt*
+    ━━━━━━━━━━━━━━━━━━━━
+    🏢 *Business:* ${customer.businessName}
+    👤 *Customer:* ${customer.name}
+    📞 *Contact:* ${customer.contact}
+    📍 *Address:* ${customer.address}
+    ━━━━━━━━━━━━━━━━━━━━
+    🛒 *Order Details:*
+    ${order.cart.map((item, index) => `🔹 *${index + 1}.* ${item.product.name}  
+       📦 Qty: ${item.qty}  💵 Price: ${item.product.price} PKR`).join("\n")}
+    ━━━━━━━━━━━━━━━━━━━━
+    📅 *Delivery Date:* ${new Date(order.deliveryDate).toLocaleDateString()}
+    💰 *Discount:* ${order.discount} PKR
+    💵 *Total Bill:* ${order.price - order.discount} PKR
+    ━━━━━━━━━━━━━━━━━━━━
+    ✨ *Thank you for your order!* We appreciate your business. 😊
+    `;
+    
+
+    try {
+      await sendMessage(contact, receiptMessage);
+    } catch (error) {
+      console.log("Error sending the WhatsApp receipt:", error);
+    }
+  } catch (error) {
+    return next(new ErrorHandler(error.message, 500));
+  }
+});
+
 export const deleteCart = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
